@@ -319,10 +319,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         // Populate editor
-        ItemGroupText = row.ItemGroup?.ToString() ?? "";
-        ItemChanceText = row.ItemChance?.ToString() ?? "";
-        CategoryGroupText = row.CategoryGroup?.ToString() ?? "";
-        CategoryChanceText = row.CategoryChance?.ToString() ?? "";
+        ItemGroupText = row.ItemGroup?.ToString() ?? "0";
+        ItemChanceText = row.ItemChance?.ToString() ?? "100.0";
+        CategoryGroupText = row.CategoryGroup?.ToString() ?? "0";
+        CategoryChanceText = row.CategoryChance?.ToString() ?? "100.0";
 
         RefreshNpcPanel();
     }

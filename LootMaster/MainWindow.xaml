@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:LootMaster.ViewModels"
         xmlns:cv="clr-namespace:LootMaster.Converters"
         Title="LootMaster 2.0 — Loot Group Editor"
+        Icon="GameIcon.ico"
         Height="960" Width="1900"
         MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen">
