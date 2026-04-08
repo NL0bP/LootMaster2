@@ -81,6 +81,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         OpenJsonCommand = new RelayCommand(async () => await OpenJsonAsync());
         SaveProgressCommand = new RelayCommand(async () => await SaveProgressAsync());
         ExportCommand = new RelayCommand(async () => await ExportAsync(), () => _allRows.Count > 0);
+        SyncDbCommand = new RelayCommand(async () => await SyncDbAsync(), () => _allRows.Count > 0);
         ApplyItemCommand = new RelayCommand(ApplyItemSettings, () => _selectedItem is not null);
         ClearItemCommand = new RelayCommand(ClearItemSettings, () => _selectedItem is not null);
         ApplyCategoryCommand = new RelayCommand(ApplyCategorySettings, () => _selectedItem is not null);
@@ -101,6 +102,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand OpenJsonCommand { get; }
     public ICommand SaveProgressCommand { get; }
     public ICommand ExportCommand { get; }
+    public ICommand SyncDbCommand { get; }
     public ICommand ApplyItemCommand { get; }
     public ICommand ClearItemCommand { get; }
     public ICommand ApplyCategoryCommand { get; }
@@ -580,6 +582,67 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             MessageBox.Show($"Ошибка экспорта:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task SyncDbAsync()
+    {
+        // Collect only rows that have both group and chance assigned
+        var syncItems = _allRows
+            .Where(r => r.EffectiveGroup.HasValue && r.EffectiveChance.HasValue)
+            .Select(r =>
+            {
+                var npcIds = _itemsData.TryGetValue(r.ItemId, out var info) ? info.NpcIds : (IReadOnlyList<int>)[];
+                return new SyncItem(r.ItemId, npcIds, r.EffectiveGroup!.Value, r.EffectiveChance!.Value);
+            })
+            .ToList();
+
+        if (syncItems.Count == 0)
+        {
+            MessageBox.Show("Нет предметов с назначенными группой и шансом.", "Нечего записывать",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Preview
+        var svc = new DbSyncService(_progress.DbPath);
+        DbSyncService.SyncPreview preview;
+        try
+        {
+            StatusText = "Подсчёт затронутых строк…";
+            preview = await svc.PreviewAsync(syncItems);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при анализе БД:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Ошибка.";
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"Будет обновлено:\n" +
+            $"  loots:        {preview.LootRows} строк\n" +
+            $"  loot_groups:  {preview.LootGroupRows} строк\n\n" +
+            $"Продолжить?",
+            "Запись в БД", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes) { StatusText = "Запись отменена."; return; }
+
+        // Sync
+        IsLoading = true;
+        try
+        {
+            var progress = new Progress<string>(msg => StatusText = msg);
+            await svc.SyncAsync(syncItems, progress);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка записи в БД:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Ошибка записи в БД.";
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
