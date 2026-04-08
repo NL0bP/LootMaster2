@@ -57,7 +57,14 @@ public sealed class DatabaseService(string dbPath)
                 categoryNameMap[id] = catNames.TryGetValue(id, out var loc) && !string.IsNullOrEmpty(loc) ? loc : fallback;
             }
 
-            // 4. Build result
+            // 4. Load loot_pack_ids for each NPC
+            var npcIdList = new List<int>(itemToNpcs.Values.SelectMany(s => s).Distinct());
+            var npcToPackId = LoadNpcPackIds(conn, npcIdList);
+
+            // 5. Load existing loot assignments from loots table
+            var lootData = LoadLootData(conn, foundIds);
+
+            // 6. Build result
             Dictionary<int, ItemInfo> result = new(foundIds.Count);
             foreach (var id in itemIds)
             {
@@ -71,6 +78,13 @@ public sealed class DatabaseService(string dbPath)
                 npcIds.Sort();
                 var npcNamesList = npcIds.ConvertAll(nId => npcNames.TryGetValue(nId, out var nn) ? nn : "");
 
+                var lootPackIds = npcIds
+                    .Where(nId => npcToPackId.ContainsKey(nId))
+                    .Select(nId => npcToPackId[nId])
+                    .Distinct().OrderBy(x => x).ToList();
+
+                lootData.TryGetValue(id, out var loot);
+
                 result[id] = new ItemInfo
                 {
                     ItemId = id,
@@ -79,6 +93,9 @@ public sealed class DatabaseService(string dbPath)
                     CategoryName = categoryNameMap.TryGetValue(catId, out var cn) ? cn : "",
                     NpcIds = npcIds,
                     NpcNames = npcNamesList,
+                    LootPackIds = lootPackIds,
+                    DbGroup = loot?.Group,
+                    DbChance = loot?.Chance,
                 };
             }
 
@@ -112,6 +129,69 @@ public sealed class DatabaseService(string dbPath)
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
+
+    private record LootEntry(int Group, double Chance);
+
+    /// <summary>Returns npc_id → loot_pack_id map from loot_pack_dropping_npcs.</summary>
+    private static Dictionary<int, int> LoadNpcPackIds(SqliteConnection conn, IReadOnlyList<int> npcIds)
+    {
+        Dictionary<int, int> result = [];
+        if (npcIds.Count == 0) return result;
+
+        foreach (var chunk in Chunked(npcIds, 500))
+        {
+            var placeholders = string.Join(',', Enumerable.Range(0, chunk.Count).Select(i => $"@p{i}"));
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT npc_id, loot_pack_id FROM loot_pack_dropping_npcs WHERE npc_id IN ({placeholders})";
+            for (int i = 0; i < chunk.Count; i++)
+                cmd.Parameters.AddWithValue($"@p{i}", chunk[i]);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                int npcId = reader.GetInt32(0);
+                int packId = reader.GetInt32(1);
+                result.TryAdd(npcId, packId);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Loads existing group and drop_rate from loots table for the given item IDs.
+    /// If an item appears in multiple loot_packs with different values, the first encountered is used.
+    /// drop_rate is converted to percent: drop_rate / 100000.0
+    /// </summary>
+    private static Dictionary<int, LootEntry> LoadLootData(SqliteConnection conn, IReadOnlyList<int> itemIds)
+    {
+        Dictionary<int, LootEntry> result = [];
+        if (itemIds.Count == 0) return result;
+
+        foreach (var chunk in Chunked(itemIds, 500))
+        {
+            var placeholders = string.Join(',', Enumerable.Range(0, chunk.Count).Select(i => $"@p{i}"));
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"""
+                SELECT item_id, "group", drop_rate
+                FROM loots
+                WHERE item_id IN ({placeholders})
+                ORDER BY item_id
+                """;
+            for (int i = 0; i < chunk.Count; i++)
+                cmd.Parameters.AddWithValue($"@p{i}", chunk[i]);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                int itemId = reader.GetInt32(0);
+                if (result.ContainsKey(itemId)) continue; // keep first
+                int grp = reader.GetInt32(1);
+                double chance = reader.GetInt32(2) / 100000.0;
+                result[itemId] = new LootEntry(grp, chance);
+            }
+        }
+        return result;
+    }
 
     private SqliteConnection OpenConnection()
     {

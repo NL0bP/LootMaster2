@@ -378,10 +378,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var ip = GetOrCreateItemProgress(itemId);
             var cp = GetOrCreateCategoryProgress(info.CategoryId);
             var tempRow = new ItemRow(info, ip, cp);
+
+            // Find loot_pack_id for this specific NPC from the item's pack list
+            int npcIndex = info.NpcIds.IndexOf(npcId);
+            int? lootPackId = npcIndex >= 0 && npcIndex < info.LootPackIds.Count
+                ? info.LootPackIds[npcIndex]
+                : (int?)null;
+
             NpcDetailItems.Add(new NpcItemRow(
                 itemId,
                 info.ItemName,
                 info.CategoryName,
+                lootPackId,
                 tempRow.EffectiveGroup,
                 tempRow.EffectiveChance,
                 tempRow.HighlightState));
@@ -621,8 +629,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         var confirm = MessageBox.Show(
             $"Будет обновлено:\n" +
-            $"  loots:        {preview.LootRows} строк\n" +
-            $"  loot_groups:  {preview.LootGroupRows} строк\n\n" +
+            $"  loots:       обновить {preview.ToUpdate}, добавить {preview.ToInsert}\n" +
+            $"  loot_groups: обновить {preview.LootGroupRows}\n\n" +
             $"Продолжить?",
             "Запись в БД", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
@@ -764,6 +772,7 @@ public sealed class NpcItemRow(
     int itemId,
     string itemName,
     string categoryName,
+    int? lootPackId,
     int? effectiveGroup,
     double? effectiveChance,
     string highlightState)
@@ -771,6 +780,7 @@ public sealed class NpcItemRow(
     public int ItemId { get; } = itemId;
     public string ItemName { get; } = itemName;
     public string CategoryName { get; } = categoryName;
+    public int? LootPackId { get; } = lootPackId;
     public int? EffectiveGroup { get; } = effectiveGroup;
     public double? EffectiveChance { get; } = effectiveChance;
     public string HighlightState { get; } = highlightState;

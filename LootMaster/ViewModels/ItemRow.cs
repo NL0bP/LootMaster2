@@ -30,8 +30,9 @@ public sealed class ItemRow : INotifyPropertyChanged
     public string ItemName     => Info.ItemName;
     public int    CategoryId   => Info.CategoryId;
     public string CategoryName => Info.CategoryName;
-    public string NpcIdsText   => string.Join(", ", Info.NpcIds);
-    public string NpcNamesText => string.Join(", ", Info.NpcNames);
+    public string NpcIdsText      => string.Join(", ", Info.NpcIds);
+    public string NpcNamesText    => string.Join(", ", Info.NpcNames);
+    public string LootPackIdsText => string.Join(", ", Info.LootPackIds);
 
     // ── Item-level progress ──────────────────────────────────────────────────
 
@@ -80,6 +81,11 @@ public sealed class ItemRow : INotifyPropertyChanged
         get => _categoryProgress.Chance;
         set { _categoryProgress.Chance = value; RaiseAll(); }
     }
+
+    // ── Current DB values (read-only, loaded at startup) ────────────────────
+
+    public int?    DbGroup  => Info.DbGroup;
+    public double? DbChance => Info.DbChance;
 
     // ── Effective (cascade) values ───────────────────────────────────────────
 

@@ -85,7 +85,7 @@
         ════════════════════════════════════════════════════════════════════ -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition x:Name="MainGridLeft" Width="5*"/>
                 <ColumnDefinition Width="4"/>
                 <ColumnDefinition Width="2.5*" MinWidth="320"/>
             </Grid.ColumnDefinitions>
@@ -135,6 +135,9 @@
                     <DataGridTextColumn Header="Шанс (категория)"   Binding="{Binding CategoryChance,Converter={StaticResource NullToStr}}" Width="120" CanUserSort="True"/>
                     <DataGridTextColumn Header="Итог. группа"       Binding="{Binding EffectiveGroup, Converter={StaticResource NullToStr}}" Width="100" CanUserSort="True"/>
                     <DataGridTextColumn Header="Итог. шанс"         Binding="{Binding EffectiveChance,Converter={StaticResource NullToStr}}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="Loot Pack ID"        Binding="{Binding LootPackIdsText}"                                   Width="120" CanUserSort="True"/>
+                    <DataGridTextColumn Header="Группа (БД)"        Binding="{Binding DbGroup,        Converter={StaticResource NullToStr}}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="Шанс (БД)"          Binding="{Binding DbChance,       Converter={StaticResource NullToStr}}" Width="100" CanUserSort="True"/>
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -275,10 +278,11 @@
                                     </Style>
                                 </DataGrid.RowStyle>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Item ID"  Binding="{Binding ItemId}"          Width="75"/>
-                                    <DataGridTextColumn Header="Предмет"  Binding="{Binding ItemName}"        Width="*"/>
-                                    <DataGridTextColumn Header="Группа"   Binding="{Binding EffectiveGroup,  Converter={StaticResource NullToStr}}" Width="65"/>
-                                    <DataGridTextColumn Header="Шанс"     Binding="{Binding EffectiveChance, Converter={StaticResource NullToStr}}" Width="65"/>
+                                    <DataGridTextColumn Header="Item ID"      Binding="{Binding ItemId}"                                             Width="75"/>
+                                    <DataGridTextColumn Header="Предмет"      Binding="{Binding ItemName}"                                           Width="*"/>
+                                    <DataGridTextColumn Header="Pack ID"      Binding="{Binding LootPackId, Converter={StaticResource NullToStr}}"   Width="65"/>
+                                    <DataGridTextColumn Header="Группа"       Binding="{Binding EffectiveGroup,  Converter={StaticResource NullToStr}}" Width="65"/>
+                                    <DataGridTextColumn Header="Шанс"         Binding="{Binding EffectiveChance, Converter={StaticResource NullToStr}}" Width="65"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>
